@@ -167,14 +167,13 @@ def raft(path):
             else:
                 pass
 
-    # --- Guardar logs en archivo ---
+    # Acá se escribe el archivo de logs
     archivo = os.path.basename(path)
     salida = os.path.join("logs", f"Raft_{archivo}")
 
     os.makedirs("logs", exist_ok=True)
 
     with open(salida, "w", encoding="utf-8") as f:
-        # LOGS
         f.write("LOGS\n")
         if logs:
             for linea in logs:
@@ -182,7 +181,6 @@ def raft(path):
         else:
             f.write("No hubo logs\n")
 
-        # BASE DE DATOS
         f.write("BASE DE DATOS\n")
         if bd:
             for k, v in bd.items():
