@@ -1,4 +1,6 @@
 LOGS
-No hubo logs
+lugar=Variable no existe
+lugar=Distrito Beika
+sospechoso=Variable no existe
 BASE DE DATOS
-No hay datos
+lugar=Distrito Beika

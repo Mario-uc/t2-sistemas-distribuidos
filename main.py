@@ -60,60 +60,204 @@ def accion(linea, bd):
         variable = divisiones[1]
         if variable in bd:
             bd.pop(variable, None)
+    return bd
 
+class Nodo():
+    def __init__(self, id_nodo: str):
+        self.id = id_nodo
+        self.is_active = True
+
+class Nodo_aceptante(Nodo):
+    def __init__(self, id_nodo: str):
+        super().__init__(id_nodo)
+        self.propuestas = []
+        self.acciones_aceptadas = []
+        self.mayor_n = 0
+    
+    #
+    def votar(self, id_propuesta):
+        if len(self.propuestas) == 0:
+            self.propuestas.append(id_propuesta)
+            if id_propuesta > self.mayor_n:
+                self.mayor_n = id_propuesta
+            return True
+        else:
+            if self.propuestas[-1] > id_propuesta:
+                return False
+            if self.propuestas[-1] < id_propuesta:
+                # CASO ESPECIAL
+                if id_propuesta > self.mayor_n:
+                    self.mayor_n = id_propuesta
+                if len(self.acciones_aceptadas) > 0:
+                    return [True, self.acciones_aceptadas[-1][0],self.acciones_aceptadas[-1][1] ]
+                else:
+                    return True
+                
+    def recibir_accion(self,accion, id_propuesta):
+        if id_propuesta >= self.mayor_n:
+            print(f" recibí : {accion}")
+            self.acciones_aceptadas.append([accion, id_propuesta])
+    def stop(self):
+        self.is_active = False
+    def start(self):
+        self.is_active = True
+
+class Nodo_proponente(Nodo):
+    def __init__(self, id_nodo: str):
+        super().__init__(id_nodo)
+        self.propuestas_aceptadas = []
+        self.acciones_previas = []
+
+    # 1. Hace votar a los nodos aceptantes activos
+    # 2. Respuestas posibles : Aceptado, rechazado (no suma en votos), Acepta pero avisa que ya avisa que ya había aceptado otra accion antes
+    # 3. si la mayoria acepta, se guarda la propuesta en propuestas_aceptadas 
+    def proponer(self, aceptantes, id_propuesta):
+        votos = 0
+        for nodo in aceptantes:
+            if nodo.is_active:
+                voto = nodo.votar(id_propuesta)
+                print(voto)
+                if isinstance(voto,bool):
+                    if voto:
+                        votos += 1 
+                else :
+                    votos += 1
+                    # CASO ESPECIAL
+                    self.acciones_previas.append([voto[1], voto[2]])
+        if votos > len(aceptantes)//2:
+            print(f"Preparo: {id_propuesta}")
+            self.propuestas_aceptadas.append(id_propuesta)
+                    
+    #                  
+    def aceptar(self, aceptantes, id_propuesta, accion):
+        if len(self.propuestas_aceptadas) > 0:
+            for propuestas in self.propuestas_aceptadas:
+                if propuestas == id_propuesta:
+                    if not self.acciones_previas:
+                        print(f" envié : {accion}")
+                        for nodo in aceptantes:
+                                    if nodo.is_active:
+                                        nodo.recibir_accion(accion, id_propuesta)
+                    else:
+                        mayor = self.acciones_previas[0]  # empezamos con el primero
+                        for elemento in self.acciones_previas:
+                            if elemento[1] > mayor[1]:
+                                mayor = elemento
+                        print(f" envié : {mayor[0]}")
+                        for nodo in aceptantes:
+                            if nodo.is_active:
+                                nodo.recibir_accion(mayor[0], id_propuesta)
+                    
+                else:
+                    print("No se hizo prepare")
+        else:
+            print("No hay propuestas aceptadas")
+        self.acciones_previas = []
 
 
 def paxos(path):
     bd = {}
-    propuestas = {}
-    aceptadas = {}
-    logs = []  
-
-
+    logs = []
 
     with open(path, encoding="utf-8") as f:
-        for linea in f:
+        lineas = f.readlines()
+        
+        nodos_aceptantes = [Nodo_aceptante(id.strip()) for id in lineas[0].split("#", 1)[0].split(";")]
+        nodos_proponentes = [Nodo_proponente(id.strip()) for id in lineas[1].split("#", 1)[0].split(";")]
+        print("nodos aceptantes")
+        for nodo in nodos_aceptantes:
+            print(nodo.id)
+        print("nodos proponentes")
+        for nodo in nodos_proponentes:
+            print(nodo.id)
 
+        # COMANDOS
+        if lineas[2]:
+            for linea in lineas[2:]:
             #esto para eliminar el comentario al final de la línea
-            linea = linea.split("#", 1)[0].strip()
-            if not linea:
-                continue
+                linea = linea.split("#", 1)[0].strip()
+                if not linea:
+                    continue
 
-            partes = linea.split(";")
+                partes = linea.split(";")
 
-            comando = partes[0]
-
-
-            # TODO: Completar con la lógica de cada comando
-
-            if comando == "Prepare":
-                pass
-
-            elif comando == "Accept":
-                pass
-
-            elif comando == "Learn":
-                pass
-
-            elif comando == "Log":
-                pass
-
-            elif comando == "Start":
-                pass
-            
-            elif comando == "Stop":
-                pass
-
-            else:
-                pass
+                comando = partes[0]
 
 
+                # TODO: Completar con la lógica de cada comando
+
+                print(linea)
+
+                if comando == "Prepare":
+                    for nodo in nodos_proponentes:
+                        if nodo.id == partes[1]:
+                            nodo.proponer(nodos_aceptantes, int(partes[2]))
+
+                elif comando == "Accept": 
+                    for nodo in nodos_proponentes:
+                        if nodo.id.strip() == partes[1].strip():
+                            nodo.aceptar(nodos_aceptantes, int(partes[2]), partes[3])
+
+                elif comando == "Learn":
+                    acciones = []
+                    for nodo in nodos_aceptantes:
+                        acciones.append(nodo.acciones_aceptadas)
+                    
+                    contador = {}
+                    
+                    if acciones:
+                        for acciones_por_nodo in acciones:
+                            # usamos set para evitar contar duplicados dentro del mismo nodo
+                            acciones_unicas = set(tuple(a) for a in acciones_por_nodo)
+
+                            for accion1 in acciones_unicas:
+                                if accion1 not in contador:
+                                    contador[accion1] = 0
+                                contador[accion1] += 1
+                        # umbral del 50%
+                        umbral = len(nodos_aceptantes) / 2
+
+                        # obtenemos las acciones que aparecen en más del 50% de los nodos
+                        recurrentes = [list(a) for a, veces in contador.items() if veces > umbral]
+                        
+                        bd = accion(recurrentes[-1][0], bd)
+                    #sets = [set(map(tuple, l)) for l in acciones]
+                    #comunes = list(map(list, set.intersection(*sets)))
+                    #bd = accion(comunes[-1][0], bd)
+                    for nodo in nodos_aceptantes:
+                        if nodo.is_active:
+                            nodo.propuestas = []
+                            nodo.acciones_aceptadas = []
+                            nodo.mayor_n = 0
+                    for nodo in nodos_proponentes:
+                        if nodo.is_active:
+                            nodo.propuestas_aceptadas = []
+                            nodo.acciones_previas = []  
+
+
+                elif comando == "Log":
+                    if partes[1] in bd:
+                        logs.append(f"{partes[1]}={bd[partes[1]]}")
+                    else:
+                        logs.append(f"{partes[1]}=Variable no existe")
+
+                elif comando == "Start":
+                    for nodo in nodos_aceptantes:
+                        if nodo.id == partes[1]:
+                            nodo.start()
+                
+                elif comando == "Stop":
+                    for nodo in nodos_aceptantes:
+                        if nodo.id == partes[1]:
+                            nodo.stop()
+
+                else:
+                    pass
     # Acá se escribe el archivo de logs
     archivo = os.path.basename(path)
     salida = os.path.join("logs", f"Paxos_{archivo}")
     
     ruta_salida = os.path.dirname(salida)
-
     with open(salida, "w", encoding="utf-8") as f:
         f.write("LOGS\n")
         if logs:
