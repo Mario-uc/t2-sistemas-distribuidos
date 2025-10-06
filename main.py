@@ -202,9 +202,6 @@ def paxos(path):
                         recurrentes = [list(a) for a, veces in contador.items() if veces > len(nodos_aceptantes) / 2]
                         
                         bd = accion(recurrentes[-1][0], bd)
-                    #sets = [set(map(tuple, l)) for l in acciones]
-                    #comunes = list(map(list, set.intersection(*sets)))
-                    #bd = accion(comunes[-1][0], bd)
                     for nodo in nodos_aceptantes:
                         if nodo.is_active:
                             nodo.propuestas = []
