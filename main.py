@@ -70,32 +70,26 @@ class Nodo():
 class Nodo_aceptante(Nodo):
     def __init__(self, id_nodo: str):
         super().__init__(id_nodo)
-        self.propuestas = []
         self.acciones_aceptadas = []
         self.mayor_n = 0
     
-    #
     def votar(self, id_propuesta):
-        if len(self.propuestas) == 0:
-            self.propuestas.append(id_propuesta)
-            if id_propuesta > self.mayor_n:
-                self.mayor_n = id_propuesta
+        # No ha recibido antes un prepare
+        if self.mayor_n == 0:
+            self.mayor_n = id_propuesta
             return True
         else:
-            if self.propuestas[-1] > id_propuesta:
+            if self.mayor_n > id_propuesta:
                 return False
-            if self.propuestas[-1] < id_propuesta:
-                # CASO ESPECIAL
-                if id_propuesta > self.mayor_n:
-                    self.mayor_n = id_propuesta
+            if self.mayor_n < id_propuesta:
+                self.mayor_n = id_propuesta
                 if len(self.acciones_aceptadas) > 0:
-                    return [True, self.acciones_aceptadas[-1][0],self.acciones_aceptadas[-1][1] ]
+                    return [True, self.acciones_aceptadas[-1][0],self.acciones_aceptadas[-1][1]]
                 else:
                     return True
                 
     def recibir_accion(self,accion, id_propuesta):
         if id_propuesta >= self.mayor_n:
-            print(f" recibí : {accion}")
             self.acciones_aceptadas.append([accion, id_propuesta])
     def stop(self):
         self.is_active = False
@@ -109,14 +103,14 @@ class Nodo_proponente(Nodo):
         self.acciones_previas = []
 
     # 1. Hace votar a los nodos aceptantes activos
-    # 2. Respuestas posibles : Aceptado, rechazado (no suma en votos), Acepta pero avisa que ya avisa que ya había aceptado otra accion antes
+    # 2. Respuestas posibles : Aceptado, rechazado (no suma en votos) o
+    #  acepta pero avisa que ya había aceptado otra accion antes
     # 3. si la mayoria acepta, se guarda la propuesta en propuestas_aceptadas 
     def proponer(self, aceptantes, id_propuesta):
         votos = 0
         for nodo in aceptantes:
             if nodo.is_active:
                 voto = nodo.votar(id_propuesta)
-                print(voto)
                 if isinstance(voto,bool):
                     if voto:
                         votos += 1 
@@ -125,33 +119,30 @@ class Nodo_proponente(Nodo):
                     # CASO ESPECIAL
                     self.acciones_previas.append([voto[1], voto[2]])
         if votos > len(aceptantes)//2:
-            print(f"Preparo: {id_propuesta}")
+            
             self.propuestas_aceptadas.append(id_propuesta)
-                    
-    #                  
+                                    
     def aceptar(self, aceptantes, id_propuesta, accion):
+        # Primero verificar que nos aceptaron la propuesta
         if len(self.propuestas_aceptadas) > 0:
             for propuestas in self.propuestas_aceptadas:
                 if propuestas == id_propuesta:
+                    # Si nadie tenía una acción que compartir, envió la mía
                     if not self.acciones_previas:
-                        print(f" envié : {accion}")
                         for nodo in aceptantes:
                                     if nodo.is_active:
                                         nodo.recibir_accion(accion, id_propuesta)
                     else:
-                        mayor = self.acciones_previas[0]  # empezamos con el primero
+                        # enviamos el que tiene mayor id
+                        mayor = self.acciones_previas[0]
                         for elemento in self.acciones_previas:
                             if elemento[1] > mayor[1]:
                                 mayor = elemento
-                        print(f" envié : {mayor[0]}")
+                        
                         for nodo in aceptantes:
                             if nodo.is_active:
                                 nodo.recibir_accion(mayor[0], id_propuesta)
                     
-                else:
-                    print("No se hizo prepare")
-        else:
-            print("No hay propuestas aceptadas")
         self.acciones_previas = []
 
 
@@ -164,12 +155,8 @@ def paxos(path):
         
         nodos_aceptantes = [Nodo_aceptante(id.strip()) for id in lineas[0].split("#", 1)[0].split(";")]
         nodos_proponentes = [Nodo_proponente(id.strip()) for id in lineas[1].split("#", 1)[0].split(";")]
-        print("nodos aceptantes")
-        for nodo in nodos_aceptantes:
-            print(nodo.id)
-        print("nodos proponentes")
-        for nodo in nodos_proponentes:
-            print(nodo.id)
+        
+        
 
         # COMANDOS
         if lineas[2]:
@@ -186,7 +173,7 @@ def paxos(path):
 
                 # TODO: Completar con la lógica de cada comando
 
-                print(linea)
+               
 
                 if comando == "Prepare":
                     for nodo in nodos_proponentes:
