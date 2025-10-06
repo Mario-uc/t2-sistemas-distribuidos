@@ -1,0 +1,7 @@
+LOGS
+criminal=vecino de la víctima
+arma homicida=cuchillo
+criminal=Variable no existe
+arma homicida=cuchillo
+BASE DE DATOS
+arma homicida=cuchillo
