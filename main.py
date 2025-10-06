@@ -194,18 +194,12 @@ def paxos(path):
                     
                     if acciones:
                         for acciones_por_nodo in acciones:
-                            # usamos set para evitar contar duplicados dentro del mismo nodo
                             acciones_unicas = set(tuple(a) for a in acciones_por_nodo)
-
                             for accion1 in acciones_unicas:
                                 if accion1 not in contador:
                                     contador[accion1] = 0
                                 contador[accion1] += 1
-                        # umbral del 50%
-                        umbral = len(nodos_aceptantes) / 2
-
-                        # obtenemos las acciones que aparecen en más del 50% de los nodos
-                        recurrentes = [list(a) for a, veces in contador.items() if veces > umbral]
+                        recurrentes = [list(a) for a, veces in contador.items() if veces > len(nodos_aceptantes) / 2]
                         
                         bd = accion(recurrentes[-1][0], bd)
                     #sets = [set(map(tuple, l)) for l in acciones]
